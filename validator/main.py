@@ -1,8 +1,9 @@
-import re
-import string
-from typing import Any, Callable, Dict, Optional
-
-import rstr
+import json
+from string import Template
+import yaml
+from jsonschema import Draft202012Validator, ValidationError
+from referencing import Registry, jsonschema as jsonschema_ref
+from typing import Callable, Dict, List, Optional, Union
 
 from guardrails.validator_base import (
     FailResult,
@@ -12,60 +13,72 @@ from guardrails.validator_base import (
     register_validator,
 )
 
+from .schemas import open_api_spec_schema
 
-@register_validator(name="guardrails/regex_match", data_type="string")
-class RegexMatch(Validator):
-    """Validates that a value matches a regular expression.
+@register_validator(name="guardrails/valid_open_api_spec", data_type=["string", "object"])
+class ValidOpenApiSpec(Validator):
+    """Validates that a value is a valid OpenAPI Specification.
 
     **Key Properties**
 
     | Property                      | Description                       |
     | ----------------------------- | --------------------------------- |
-    | Name for `format` attribute   | `regex_match`                     |
-    | Supported data types          | `string`                          |
-    | Programmatic fix              | Generate a string that matches the regular expression |
-
-    Args:
-        regex: Str regex pattern
-        match_type: Str in {"search", "fullmatch"} for a regex search or full-match option
+    | Name for `format` attribute   | `valid_open_api_spec`             |
+    | Supported data types          | `string`, `object`                |
+    | Programmatic fix              | None                              |
     """  # noqa
+
+    _openapi_registry: Registry
+    _openapi_spec_validator: Draft202012Validator
 
     def __init__(
         self,
-        regex: str,
-        match_type: Optional[str] = None,
-        on_fail: Optional[Callable] = None,
+        on_fail: Optional[Union[str, Callable]] = None,
     ):
-        # todo -> something forces this to be passed as kwargs and therefore xml-ized.
-        # match_types = ["fullmatch", "search"]
-
-        if match_type is None:
-            match_type = "fullmatch"
-        assert match_type in [
-            "fullmatch",
-            "search",
-        ], 'match_type must be in ["fullmatch", "search"]'
-
-        super().__init__(on_fail=on_fail, match_type=match_type, regex=regex)
-        self._regex = regex
-        self._match_type = match_type
-
-    def validate(self, value: Any, metadata: Dict) -> ValidationResult:
-        p = re.compile(self._regex)
-        """Validates that value matches the provided regular expression."""
-        # Pad matching string on either side for fix
-        # example if we are performing a regex search
-        str_padding = (
-            "" if self._match_type == "fullmatch" else rstr.rstr(string.ascii_lowercase)
-        )
-        self._fix_str = str_padding + rstr.xeger(self._regex) + str_padding
-
-        if not getattr(p, self._match_type)(value):
-            return FailResult(
-                error_message=f"Result must match {self._regex}",
-                fix_value=self._fix_str,
+        super().__init__(on_fail=on_fail)
+        self._openapi_registry = Registry().with_resources([
+            (
+                "urn:open-api-spec",
+                jsonschema_ref.DRAFT202012.create_resource(open_api_spec_schema)
             )
-        return PassResult()
+        ])
 
-    def to_prompt(self, with_keywords: bool = True) -> str:
-        return "results should match " + self._regex
+        self._openapi_spec_validator = Draft202012Validator(
+            {
+                "$ref": "urn:open-api-spec",
+            },
+            registry=self._openapi_registry
+        )
+
+    
+    def _to_json(self, value: Union[str, Dict]):
+        if isinstance(value, str):
+            try:
+                return json.loads(value)
+            except Exception:
+                try:
+                    return yaml.safe_load(value)
+                except Exception:
+                    return None
+        return value
+
+
+    def validate(self, value: Union[str, Dict], metadata: Dict) -> ValidationResult:        
+        potential_spec = self._to_json(value)
+
+        fields: Dict[str, List[str]] = {}
+        error: ValidationError
+        for error in self._openapi_spec_validator.iter_errors(potential_spec):
+            fields[error.json_path] = fields.get(error.json_path, [])
+            fields[error.json_path].append(error.message)
+
+        if fields:
+            error_message = Template("""Value is not a valid OpenAPI Specification.
+The following fields are invalid:
+${fields}
+            """)
+            return FailResult(
+                error_message=error_message.safe_substitute({ "fields": json.dumps(fields, indent=2) })
+            )
+            
+        return PassResult()
