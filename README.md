@@ -74,7 +74,19 @@ class ApiRecord(BaseModel):
 guard = Guard.from_pydantic(output_class=UserInfo)
 
 # Run LLM output generating JSON through guard
-guard.parse()
+guard.parse("""
+{
+        "name": "API",
+        "endpoint": http://localhost:8000,
+        "api_spec": {
+            "openapi": "3.0.0",
+            "info": {
+                "title": "API",
+                "version": "1.0.0"
+            }
+        }
+}
+""")
 ```
 
 # API Reference
