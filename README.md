@@ -77,7 +77,7 @@ guard = Guard.from_pydantic(output_class=UserInfo)
 guard.parse("""
 {
 		"name": "API",
-        "endpoint": http://localhost:8000
+        "endpoint": http://localhost:8000,
 		"api_spec": {
             "openapi": "3.0.0",
             "info": {
