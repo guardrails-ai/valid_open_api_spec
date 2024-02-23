@@ -29,68 +29,39 @@ In this example, we’ll test that a generated value is a valid OpenAPI spec.
 
 ```python
 import json
+
 # Import Guard and Validator
 from guardrails.hub import ValidOpenApiSpec
 from guardrails import Guard
 
-# Initialize Validator
-val = ValidOpenApiSpec()
-
 # Setup Guard
-guard = Guard.from_string(
-    validators=[val, ...],
-)
+guard = Guard().use(ValidOpenApiSpec, on_fail="exception")
 
-guard.parse(json.dumps({
-    "openapi": "3.0.0",
-    "info": {
-        "title": "API",
-        "version": "1.0.0"
-    }
-}))  # Validator passes
-guard.parse(json.dumps({
-    "openapi": "3.0.0",
-    "info": {
-        "title": "API"
-    }
-}))  # Validator fails; note the missing version
+guard.validate(
+    json.dumps(
+        {"openapi": "3.0.0", "info": {"title": "API", "version": "1.0.0"}, "paths": {}}
+    )
+)  # Validator passes
+
+try:
+    guard.validate(
+        json.dumps({"openapi": "3.0.0", "info": {"title": "API"}})
+    )  # Validator fails; note the missing version
+except Exception as e:
+    print(e)  # Raises an exception
 ```
-
-### Validating JSON output via Python
-
-In this example, we verify that a user’s email is specified in lower case.
-
-```python
-# Import Guard and Validator
-from pydantic import BaseModel
-from guardrails.hub import LowerCase
-from guardrails import Guard
-
-val = ValidOpenApiSpec()
-
-# Create Pydantic BaseModel
-class ApiRecord(BaseModel):
-    name: str
-    endpoint: float
-    api_spec: Dict = Field(validators=[ValidOpenApiSpec()])
-
-# Create a Guard to check for valid Pydantic output
-guard = Guard.from_pydantic(output_class=UserInfo)
-
-# Run LLM output generating JSON through guard
-guard.parse("""
+Output:
+```console
+Validation failed for field with errors: Value is not a valid OpenAPI Specification.
+The following fields are invalid:
 {
-        "name": "API",
-        "endpoint": http://localhost:8000,
-        "api_spec": {
-            "openapi": "3.0.0",
-            "info": {
-                "title": "API",
-                "version": "1.0.0"
-            }
-        }
+  "$": [
+    "'paths' is a required property"
+  ],
+  "$.info": [
+    "'version' is a required property"
+  ]
 }
-""")
 ```
 
 ## API Reference
