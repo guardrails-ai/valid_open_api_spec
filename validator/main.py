@@ -15,7 +15,10 @@ from guardrails.validator_base import (
 
 from .schemas import open_api_spec_schema
 
-@register_validator(name="guardrails/valid_open_api_spec", data_type=["string", "object"])
+
+@register_validator(
+    name="guardrails/valid_open_api_spec", data_type=["string", "object"]
+)
 class ValidOpenApiSpec(Validator):
     """Validates that a value is a valid OpenAPI Specification.
 
@@ -23,7 +26,7 @@ class ValidOpenApiSpec(Validator):
 
     | Property                      | Description                       |
     | ----------------------------- | --------------------------------- |
-    | Name for `format` attribute   | `valid_open_api_spec`             |
+    | Name for `format` attribute   | `guardrails/valid_open_api_spec`  |
     | Supported data types          | `string`, `object`                |
     | Programmatic fix              | None                              |
     """  # noqa
@@ -36,21 +39,22 @@ class ValidOpenApiSpec(Validator):
         on_fail: Optional[Union[str, Callable]] = None,
     ):
         super().__init__(on_fail=on_fail)
-        self._openapi_registry = Registry().with_resources([
-            (
-                "urn:open-api-spec",
-                jsonschema_ref.DRAFT202012.create_resource(open_api_spec_schema)
-            )
-        ])
+        self._openapi_registry = Registry().with_resources(
+            [
+                (
+                    "urn:open-api-spec",
+                    jsonschema_ref.DRAFT202012.create_resource(open_api_spec_schema),
+                )
+            ]
+        )
 
         self._openapi_spec_validator = Draft202012Validator(
             {
                 "$ref": "urn:open-api-spec",
             },
-            registry=self._openapi_registry
+            registry=self._openapi_registry,
         )
 
-    
     def _to_json(self, value: Union[str, Dict]):
         if isinstance(value, str):
             try:
@@ -62,8 +66,7 @@ class ValidOpenApiSpec(Validator):
                     return None
         return value
 
-
-    def validate(self, value: Union[str, Dict], metadata: Dict) -> ValidationResult:        
+    def validate(self, value: Union[str, Dict], metadata: Dict) -> ValidationResult:
         potential_spec = self._to_json(value)
 
         fields: Dict[str, List[str]] = {}
@@ -73,12 +76,16 @@ class ValidOpenApiSpec(Validator):
             fields[error.json_path].append(error.message)
 
         if fields:
-            error_message = Template("""Value is not a valid OpenAPI Specification.
+            error_message = Template(
+                """Value is not a valid OpenAPI Specification.
 The following fields are invalid:
 ${fields}
-            """)
-            return FailResult(
-                error_message=error_message.safe_substitute({ "fields": json.dumps(fields, indent=2) })
+            """
             )
-            
+            return FailResult(
+                error_message=error_message.safe_substitute(
+                    {"fields": json.dumps(fields, indent=2)}
+                )
+            )
+
         return PassResult()

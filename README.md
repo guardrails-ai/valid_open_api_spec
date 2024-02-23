@@ -4,7 +4,7 @@
 | --- | --- |
 | Date of development | Feb 15, 2024 |
 | Validator type | Format |
-| Blog |  |
+| Blog | - |
 | License | Apache 2 |
 | Input/Output | Output |
 
@@ -13,12 +13,12 @@
 This validator ensures that a generated output is a valid OpenAPI Specification.
 
 ## Requirements
-- Dependencies: `jsonschema`, `pytest`, `pyyaml`, `referencing`
+- Dependencies: `guardrails-ai`, `jsonschema`, `pyyaml`, `referencing`
 
 ## Installation
 
 ```bash
-$ guardrails hub install hub://guardrails/valid_open_api_spec
+guardrails hub install hub://guardrails/valid_open_api_spec
 ```
 
 ## Usage Examples

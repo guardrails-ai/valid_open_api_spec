@@ -1,5 +1,5 @@
 [project]
-name = "valid-open-api-spec"
+name = "valid_open_api_spec"
 version = "0.0.0"
 description = "Validates that a value is a valid OpenAPI Specification."
 authors = [
@@ -9,9 +9,8 @@ license = {file = "LICENSE"}
 readme = "README.md"
 requires-python = ">= 3.8.1"
 dependencies = [
-    "guardrails-ai>=0.3.2",
+    "guardrails-ai>=0.4.0",
     "jsonschema",
-    "pytest",
     "pyyaml",
     "referencing"
 ]
