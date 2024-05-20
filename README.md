@@ -91,7 +91,7 @@ Note:
 2. When invoking `guard.parse(...)`, ensure to pass the appropriate `metadata` dictionary that includes keys and values required by this validator. If `guard` is associated with multiple validators, combine all necessary metadata into a single dictionary.
 
 **Parameters**
-- **`value`** *(Any):* The input value to validate.
-- **`metadata`** *(dict):* A dictionary containing metadata required for validation. No additional metadata keys are needed for this validator.
+- **`value`** *(Any)*: The input value to validate.
+- **`metadata`** *(dict)*: A dictionary containing metadata required for validation. No additional metadata keys are needed for this validator.
 
 </ul>
